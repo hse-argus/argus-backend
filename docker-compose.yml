@@ -1,0 +1,23 @@
+name: argus-backend
+
+networks:
+  argus-backend-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  postgres:
+    image: postgres:14.8-alpine3.18
+    environment:
+      POSTGRES_DB: "argus"
+      POSTGRES_USER: "username"
+      POSTGRES_PASSWORD: "1234"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - argus-backend-network
+    ports:
+      - "5432:5432"
