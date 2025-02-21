@@ -1,18 +1,17 @@
 package app
 
 import (
-	"argus-backend/internal/config"
-	"argus-backend/internal/db"
+	"argus-backend/internal/logger"
+	servicesinfo "argus-backend/internal/service/services-info"
 )
 
 type App struct {
-	conf *config.Config
-	db *db.Db
+	infoService servicesinfo.ServicesInfoInterface
 }
 
-func NewApp(conf *config.Config, database *db.Db) *App {
+func NewApp(infoService servicesinfo.ServicesInfoInterface) *App {
+	logger.InitLogger()
 	return &App{
-		conf: conf,
-		db: database,
+		infoService: infoService,
 	}
 }

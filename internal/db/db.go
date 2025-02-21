@@ -2,7 +2,7 @@ package db
 
 import (
 	"argus-backend/internal/config"
-	"argus-backend/internal/repository"
+	"argus-backend/internal/repository/service"
 	"context"
 	"database/sql"
 	"fmt"
@@ -13,11 +13,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type Db struct {
-	db *bun.DB
-}
-
-func InitDb(config *config.Config) *Db {
+func InitDb(config *config.Config) *bun.DB {
 	dsn := fmt.Sprintf("postgres://%s:%s@localhost:%d/%s?sslmode=disable",
 		config.PostgresUser, config.PostgresPassword, config.PostgresPort, config.PostgresDb)
 	sqldb, err := sql.Open("pgx", dsn)
@@ -28,11 +24,11 @@ func InitDb(config *config.Config) *Db {
 	db := bun.NewDB(sqldb, pgdialect.New())
 	_, err = db.NewCreateTable().
 		IfNotExists().
-		Model((*repository.Service)(nil)).
+		Model((*service.Service)(nil)).
 		Exec(context.Background())
 
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	return &Db{db: db}
+	return db
 }
