@@ -37,3 +37,25 @@ func (sr *ServicesRepository) AddServiceInfo(newService Service) error {
 	}
 	return nil
 }
+
+func (sr *ServicesRepository) UpdateServiceInfo(newService Service) error {
+	_, err := sr.db.NewUpdate().
+		Model(&newService).
+		Where("id = ?", newService.Id).
+		Exec(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sr *ServicesRepository) DeleteServiceInfo(id int) error {
+	_, err := sr.db.NewDelete().
+		Model((*Service)(nil)).
+		Where("id = ?", id).
+		Exec(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
+}

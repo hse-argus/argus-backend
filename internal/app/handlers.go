@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 func (a *App) GetAllServices(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,37 @@ func (a *App) AddService(w http.ResponseWriter, r *http.Request) {
 	err = a.infoService.AddServiceInfo(newService)
 	if err != nil {
 		http.Error(w, "Error adding service", 500)
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *App) UpdateService(w http.ResponseWriter, r *http.Request) {
+	logger.Info("/update-service")
+
+	updatedService := service.Service{}
+	data, _ := io.ReadAll(r.Body)
+
+	err := json.Unmarshal(data, &updatedService)
+	if err != nil {
+		http.Error(w, "Something wrong with input data", 400)
+	}
+
+	err = a.infoService.UpdateServiceInfo(updatedService)
+	if err != nil {
+		http.Error(w, "Error updating service", 500)
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *App) DeleteService(w http.ResponseWriter, r *http.Request) {
+	logger.Info("/delete_service")
+
+	idStr := r.URL.Query().Get("id")
+	id, _ := strconv.Atoi(idStr)
+
+	err := a.infoService.DeleteService(id)
+	if err != nil {
+		http.Error(w, "Error deleting service", 500)
 	}
 	w.WriteHeader(http.StatusOK)
 }

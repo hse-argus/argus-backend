@@ -5,8 +5,8 @@ import "argus-backend/internal/repository/service"
 type ServicesInfoInterface interface {
 	GetAllServices() (*[]service.Service, error)
 	AddServiceInfo(service.Service) error
-	// UpdateServiceInfo(service.Service) error
-	// DeleteService() error
+	UpdateServiceInfo(service.Service) error
+	DeleteService(id int) error
 }
 
 type ServicesInfo struct {
@@ -25,4 +25,12 @@ func (si *ServicesInfo) GetAllServices() (*[]service.Service, error) {
 
 func (si *ServicesInfo) AddServiceInfo(newService service.Service) error {
 	return si.servicesRepository.AddServiceInfo(newService)
+}
+
+func (si *ServicesInfo) UpdateServiceInfo(newService service.Service) error {
+	return si.servicesRepository.UpdateServiceInfo(newService)
+}
+
+func (si *ServicesInfo) DeleteService(id int) error {
+	return si.servicesRepository.DeleteServiceInfo(id)
 }
