@@ -42,6 +42,7 @@ func (sr *ServicesRepository) UpdateServiceInfo(newService Service) error {
 	_, err := sr.db.NewUpdate().
 		Model(&newService).
 		Where("id = ?", newService.Id).
+		OmitZero().
 		Exec(context.Background())
 	if err != nil {
 		return err
@@ -58,4 +59,16 @@ func (sr *ServicesRepository) DeleteServiceInfo(id int) error {
 		return err
 	}
 	return nil
+}
+
+func (sr *ServicesRepository) GetServiceById(id int) (*Service, error) {
+	service := new(Service)
+	err := sr.db.NewSelect().
+		Model(service).
+		Where("id = ?", id).
+		Scan(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return service, nil
 }
