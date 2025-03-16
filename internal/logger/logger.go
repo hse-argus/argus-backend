@@ -6,17 +6,17 @@ import (
 )
 
 var (
-	log *slog.Logger
+	logger *slog.Logger
 )
 
 func InitLogger() {
-	log = slog.New(slog.NewTextHandler(os.Stdin, nil))
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 }
 
-func Info(info string, args ...any) {
-	log.Info(info, args)
+func Info(msg string) {
+	logger.Info(msg)
 }
 
-func Error(info string, args ...any) {
-	log.Error(info, args)
+func Error(msg string) {
+	logger.Error(msg)
 }

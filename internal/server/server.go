@@ -3,8 +3,11 @@ package server
 import (
 	"argus-backend/internal/app"
 	"argus-backend/internal/config"
+	"argus-backend/internal/logger"
 	"argus-backend/internal/middleware"
-	"fmt"
+	"context"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
+	"go.uber.org/fx"
 	"net/http"
 )
 
@@ -14,7 +17,10 @@ func NewServer(cfg *config.Config, app *app.App) *http.Server {
 	mux.Handle("/add-service", middleware.EnableCORS(http.HandlerFunc(app.AddService)))
 	mux.Handle("/update-service", middleware.EnableCORS(http.HandlerFunc(app.UpdateService)))
 	mux.Handle("/delete-service", middleware.EnableCORS(http.HandlerFunc(app.DeleteService)))
-	mux.Handle("/get_service_by_id", middleware.EnableCORS(http.HandlerFunc(app.GetServiceById)))
+	mux.Handle("/service/", middleware.EnableCORS(http.HandlerFunc(app.GetServiceById)))
+	mux.Handle("/healthcheck/", middleware.EnableCORS(http.HandlerFunc(app.HealthCheck)))
+
+	mux.Handle("/swagger/", httpSwagger.Handler(httpSwagger.URL("swagger/swagger/doc.json")))
 
 	return &http.Server{
 		Addr:    cfg.WebAddr,
@@ -22,10 +28,21 @@ func NewServer(cfg *config.Config, app *app.App) *http.Server {
 	}
 }
 
-func RunServer(srv *http.Server) error {
-	if err := srv.ListenAndServe(); err != nil {
-		return fmt.Errorf("server failed to start or finished with error: %w", err)
-	}
+func RunServer(lc fx.Lifecycle, srv *http.Server) error {
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			go func() {
+				logger.Info("starting server on " + srv.Addr)
+				if err := srv.ListenAndServe(); err != nil {
+					logger.Error("error starting server: " + err.Error())
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return srv.Shutdown(ctx)
+		},
+	})
 
 	return nil
 }

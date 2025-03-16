@@ -4,9 +4,11 @@ import (
 	"argus-backend/internal/logger"
 	"argus-backend/internal/repository/service"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func (a *App) GetAllServices(w http.ResponseWriter, r *http.Request) {
@@ -80,15 +82,40 @@ func (a *App) DeleteService(w http.ResponseWriter, r *http.Request) {
 func (a *App) GetServiceById(w http.ResponseWriter, r *http.Request) {
 	logger.Info("/get_service_by_id")
 
-	idStr := r.URL.Query().Get("id")
-	id, _ := strconv.Atoi(idStr)
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, _ := strconv.Atoi(parts[2])
 
 	serviceById, err := a.infoService.GetServiceById(id)
 	if err != nil {
 		http.Error(w, "Error getting service", 500)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(serviceById)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *App) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	logger.Info("/health_check")
+
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, _ := strconv.Atoi(parts[2])
+
+	serviceById, err := a.infoService.GetServiceById(id)
+	if err != nil {
+		http.Error(w, "Error getting service", 500)
+		return
+	}
+
+	statusCode, err := a.clientService.SendRequest(serviceById.Address, serviceById.Port)
+	if err != nil {
+		http.Error(w, "Error sending request", 500)
+		return
+	}
+
+	_, err = fmt.Fprintf(w, "Результат healthcheck: %d", statusCode)
 	w.WriteHeader(http.StatusOK)
 }

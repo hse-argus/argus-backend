@@ -2,16 +2,19 @@ package app
 
 import (
 	"argus-backend/internal/logger"
+	clientservice "argus-backend/internal/service/client-service"
 	servicesinfo "argus-backend/internal/service/services-info"
 )
 
 type App struct {
-	infoService servicesinfo.ServicesInfoInterface
+	infoService   servicesinfo.ServicesInfoInterface
+	clientService *clientservice.ClientService
 }
 
-func NewApp(infoService servicesinfo.ServicesInfoInterface) *App {
+func NewApp(infoService servicesinfo.ServicesInfoInterface, service *clientservice.ClientService) *App {
 	logger.InitLogger()
 	return &App{
-		infoService: infoService,
+		infoService:   infoService,
+		clientService: service,
 	}
 }

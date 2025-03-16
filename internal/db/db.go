@@ -14,7 +14,7 @@ import (
 )
 
 func InitDb(config *config.Config) *bun.DB {
-	dsn := fmt.Sprintf("postgres://%s:%s@localhost:%d/%s?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://%s:%s@postgres:%d/%s?sslmode=disable",
 		config.PostgresUser, config.PostgresPassword, config.PostgresPort, config.PostgresDb)
 	sqldb, err := sql.Open("pgx", dsn)
 	if err != nil {
