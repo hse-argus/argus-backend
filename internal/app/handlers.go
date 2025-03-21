@@ -5,11 +5,18 @@ import (
 	"argus-backend/internal/repository/service"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func (a *App) GetAllServices(w http.ResponseWriter, r *http.Request) {
 	logger.Info("/get_all_services")
@@ -116,6 +123,47 @@ func (a *App) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = a.notificationService.SendNotification(fmt.Sprintf("Результат healthcheck: %d", statusCode),
+		a.connections)
+	if err != nil {
+		http.Error(w, "Error sending notification", 500)
+		return
+	}
+
 	_, err = fmt.Fprintf(w, "Результат healthcheck: %d", statusCode)
 	w.WriteHeader(http.StatusOK)
+}
+
+func (a *App) HandleWSConnection(w http.ResponseWriter, r *http.Request) {
+	logger.Info("/ws")
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		logger.Error("error connecting to websocket: " + err.Error())
+		return
+	}
+
+	a.mu.Lock()
+	a.connections[ws] = true
+	a.mu.Unlock()
+
+	defer func() {
+		a.mu.Lock()
+		delete(a.connections, ws)
+		a.mu.Unlock()
+		logger.Info("ws connection closed")
+	}()
+
+	defer ws.Close()
+
+	for {
+		_, _, err := ws.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				logger.Info("websocket connection closed unexpectedly")
+			} else {
+				logger.Info("WebSocket connection closed by client")
+			}
+			break
+		}
+	}
 }

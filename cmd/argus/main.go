@@ -9,6 +9,7 @@ import (
 	"argus-backend/internal/repository/service"
 	"argus-backend/internal/server"
 	clientservice "argus-backend/internal/service/client-service"
+	"argus-backend/internal/service/notification-service"
 	servicesinfo "argus-backend/internal/service/services-info"
 
 	"go.uber.org/fx"
@@ -25,6 +26,7 @@ func main() {
 			db.InitDb,
 			service.NewServicesRepository,
 			servicesinfo.NewServicesInfo,
+			notificationservice.NewWebNotificationService,
 			app.NewApp,
 			server.NewServer),
 		fx.Invoke(logger.InitLogger, server.RunServer),
