@@ -2,6 +2,7 @@ package app
 
 import (
 	"argus-backend/internal/logger"
+	"argus-backend/internal/repository/schedule"
 	"argus-backend/internal/repository/service"
 	"encoding/json"
 	"fmt"
@@ -123,10 +124,16 @@ func (a *App) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.notificationService.SendNotification(fmt.Sprintf("Результат healthcheck: %d", statusCode),
+	err = a.notificationService.SendWebNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s", statusCode, serviceById.Name),
 		a.connections)
 	if err != nil {
-		http.Error(w, "Error sending notification", 500)
+		http.Error(w, "Error sending web notification", 500)
+		return
+	}
+
+	err = a.notificationService.SendEmailNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s", statusCode, serviceById.Name))
+	if err != nil {
+		http.Error(w, "Error sending email notification", 500)
 		return
 	}
 
@@ -166,4 +173,40 @@ func (a *App) HandleWSConnection(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+}
+
+func (a *App) HandleSchedule(w http.ResponseWriter, r *http.Request) {
+	logger.Info("/health_check-scheduled")
+
+	timeSchedule := schedule.Schedule{}
+	data, _ := io.ReadAll(r.Body)
+
+	err := json.Unmarshal(data, &timeSchedule)
+	if err != nil {
+		http.Error(w, "Something wrong with data", 400)
+		return
+	}
+
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, _ := strconv.Atoi(parts[2])
+
+	serviceById, err := a.infoService.GetServiceById(id)
+	if err != nil {
+		http.Error(w, "Error getting service", 500)
+		return
+	}
+
+	parsedSchedule, ok := timeSchedule.ParseScheduleDuration()
+	if !ok {
+		http.Error(w, "Bad time schedule", 400)
+		return
+	}
+
+	err = a.StartNewJob(serviceById, parsedSchedule)
+	if err != nil {
+		http.Error(w, "Error starting new job", 500)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

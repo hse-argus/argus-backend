@@ -29,7 +29,7 @@ func main() {
 			notificationservice.NewWebNotificationService,
 			app.NewApp,
 			server.NewServer),
-		fx.Invoke(logger.InitLogger, server.RunServer),
+		fx.Invoke(logger.InitLogger, app.InvokeScheduler, server.RunServer),
 	)
 	fx.New(addOpts).Run()
 }

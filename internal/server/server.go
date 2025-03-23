@@ -20,6 +20,7 @@ func NewServer(cfg *config.Config, app *app.App) *http.Server {
 	mux.Handle("/service/", middleware.EnableCORS(http.HandlerFunc(app.GetServiceById)))
 	mux.Handle("/healthcheck/", middleware.EnableCORS(http.HandlerFunc(app.HealthCheck)))
 	mux.Handle("/ws", middleware.EnableCORS(http.HandlerFunc(app.HandleWSConnection)))
+	mux.Handle("/health_check-scheduled/", middleware.EnableCORS(http.HandlerFunc(app.HandleSchedule)))
 
 	mux.Handle("/swagger/", httpSwagger.Handler(httpSwagger.URL("swagger/swagger/doc.json")))
 

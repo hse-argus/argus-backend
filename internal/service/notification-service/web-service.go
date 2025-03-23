@@ -5,13 +5,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type WebNotificationService struct{}
+type NotificationService struct{}
 
-func NewWebNotificationService() *WebNotificationService {
-	return &WebNotificationService{}
+func NewWebNotificationService() *NotificationService {
+	return &NotificationService{}
 }
 
-func (wns *WebNotificationService) SendNotification(text string, connections map[*websocket.Conn]bool) error {
+func (wns *NotificationService) SendWebNotification(text string, connections map[*websocket.Conn]bool) error {
 	for connection := range connections {
 		err := connection.WriteMessage(websocket.TextMessage, []byte(text))
 		if err != nil {
