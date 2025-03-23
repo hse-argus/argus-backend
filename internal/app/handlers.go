@@ -4,13 +4,12 @@ import (
 	"argus-backend/internal/logger"
 	"argus-backend/internal/repository/schedule"
 	"argus-backend/internal/repository/service"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"io"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 var upgrader = websocket.Upgrader{
@@ -19,131 +18,113 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func (a *App) GetAllServices(w http.ResponseWriter, r *http.Request) {
+func (a *App) GetAllServices(c *gin.Context) {
 	logger.Info("/get_all_services")
 
 	services, err := a.infoService.GetAllServices()
 	if err != nil {
-		http.Error(w, "Error gettin all services", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting all services"))
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(services)
-	w.WriteHeader(http.StatusOK)
+	c.JSON(http.StatusOK, services)
 }
 
-func (a *App) AddService(w http.ResponseWriter, r *http.Request) {
+func (a *App) AddService(c *gin.Context) {
 	logger.Info("/add_service")
 
 	newService := service.Service{}
-	data, _ := io.ReadAll(r.Body)
-
-	err := json.Unmarshal(data, &newService)
-	if err != nil {
-		http.Error(w, "Something wrong with data", 400)
+	if err := c.BindJSON(&newService); err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, errors.New("error parsing body"))
 		return
 	}
 
-	err = a.infoService.AddServiceInfo(newService)
+	err := a.infoService.AddServiceInfo(newService)
 	if err != nil {
-		http.Error(w, "Error adding service", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error adding service"))
+		return
 	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
-func (a *App) UpdateService(w http.ResponseWriter, r *http.Request) {
+func (a *App) UpdateService(c *gin.Context) {
 	logger.Info("/update-service")
 
 	updatedService := service.Service{}
-	data, _ := io.ReadAll(r.Body)
-
-	err := json.Unmarshal(data, &updatedService)
-	if err != nil {
-		http.Error(w, "Something wrong with input data", 400)
+	if err := c.BindJSON(&updatedService); err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, errors.New("error parsing body"))
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	err = a.infoService.UpdateServiceInfo(updatedService)
+	err := a.infoService.UpdateServiceInfo(updatedService)
 	if err != nil {
-		http.Error(w, "Error updating service", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error updating service"))
 	}
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
-func (a *App) DeleteService(w http.ResponseWriter, r *http.Request) {
+func (a *App) DeleteService(c *gin.Context) {
 	logger.Info("/delete_service")
 
-	idStr := r.URL.Query().Get("id")
-	id, _ := strconv.Atoi(idStr)
-
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	id, _ := strconv.Atoi(c.Query("id"))
 	err := a.infoService.DeleteService(id)
 	if err != nil {
-		http.Error(w, "Error deleting service", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error deleting service"))
 	}
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
-func (a *App) GetServiceById(w http.ResponseWriter, r *http.Request) {
+func (a *App) GetServiceById(c *gin.Context) {
 	logger.Info("/get_service_by_id")
 
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	id, _ := strconv.Atoi(parts[2])
-
+	id, _ := strconv.Atoi(c.Param("id"))
 	serviceById, err := a.infoService.GetServiceById(id)
 	if err != nil {
-		http.Error(w, "Error getting service", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting service"))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(serviceById)
-	w.WriteHeader(http.StatusOK)
+	c.JSON(http.StatusOK, serviceById)
 }
 
-func (a *App) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (a *App) HealthCheck(c *gin.Context) {
 	logger.Info("/health_check")
 
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	id, _ := strconv.Atoi(parts[2])
-
+	id, _ := strconv.Atoi(c.Param("id"))
 	serviceById, err := a.infoService.GetServiceById(id)
 	if err != nil {
-		http.Error(w, "Error getting service", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting service"))
 		return
 	}
 
 	statusCode, err := a.clientService.SendRequest(serviceById.Address, serviceById.Port)
 	if err != nil {
-		http.Error(w, "Error sending request", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error sending request"))
 		return
 	}
 
-	err = a.notificationService.SendWebNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s", statusCode, serviceById.Name),
+	err = a.notificationService.SendWebNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s",
+		statusCode,
+		serviceById.Name),
 		a.connections)
 	if err != nil {
-		http.Error(w, "Error sending web notification", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error sending web notification"))
 		return
 	}
 
-	err = a.notificationService.SendEmailNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s", statusCode, serviceById.Name))
+	err = a.notificationService.SendEmailNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s",
+		statusCode,
+		serviceById.Name))
 	if err != nil {
-		http.Error(w, "Error sending email notification", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error sending email notification"))
 		return
 	}
 
-	_, err = fmt.Fprintf(w, "Результат healthcheck: %d", statusCode)
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
-func (a *App) HandleWSConnection(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleWSConnection(c *gin.Context) {
 	logger.Info("/ws")
-	ws, err := upgrader.Upgrade(w, r, nil)
+	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Error("error connecting to websocket: " + err.Error())
 		return
@@ -175,38 +156,32 @@ func (a *App) HandleWSConnection(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) HandleSchedule(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleSchedule(c *gin.Context) {
 	logger.Info("/health_check-scheduled")
 
 	timeSchedule := schedule.Schedule{}
-	data, _ := io.ReadAll(r.Body)
-
-	err := json.Unmarshal(data, &timeSchedule)
-	if err != nil {
-		http.Error(w, "Something wrong with data", 400)
+	if err := c.BindJSON(&timeSchedule); err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, errors.New("error parsing body"))
 		return
 	}
 
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	id, _ := strconv.Atoi(parts[2])
-
+	id, _ := strconv.Atoi(c.Param("id"))
 	serviceById, err := a.infoService.GetServiceById(id)
 	if err != nil {
-		http.Error(w, "Error getting service", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting service"))
 		return
 	}
 
 	parsedSchedule, ok := timeSchedule.ParseScheduleDuration()
 	if !ok {
-		http.Error(w, "Bad time schedule", 400)
+		_ = c.AbortWithError(http.StatusBadRequest, errors.New("unexisted schedule"))
 		return
 	}
 
 	err = a.StartNewJob(serviceById, parsedSchedule)
 	if err != nil {
-		http.Error(w, "Error starting new job", 500)
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error starting job"))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
