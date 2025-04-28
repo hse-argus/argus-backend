@@ -15,16 +15,22 @@ func NewServer(cfg *config.Config, app *app.App) *http.Server {
 	router := gin.New()
 	router.Use(middleware.EnableCORS)
 
-	router.GET("/service", app.GetAllServices)
-	router.POST("/service", app.AddService)
-	router.PUT("/service", app.UpdateService)
-	router.DELETE("/service", app.DeleteService)
-	router.GET("/service/:id", app.GetServiceById)
+	authorized := router.Group("/")
+	authorized.Use(middleware.JWTTokenVerify)
+	{
+		authorized.GET("/service", app.GetAllServices)
+		authorized.POST("/service", app.AddService)
+		authorized.PUT("/service", app.UpdateService)
+		authorized.DELETE("/service", app.DeleteService)
+		authorized.GET("/service/:id", app.GetServiceById)
 
-	router.POST("/healthcheck/:id", app.HealthCheck)
-	router.POST("/scheduled-healthcheck/:id", app.HandleSchedule)
-
-	router.GET("/ws", app.HandleWSConnection)
+		authorized.POST("/healthcheck/:id", app.HealthCheck)
+		authorized.POST("/scheduled-healthcheck/:id", app.HandleSchedule)
+		authorized.DELETE("/schedule", app.DeleteSchedule)
+		authorized.GET("/ws", app.HandleWSConnection)
+	}
+	router.POST("/login", app.Login)
+	router.POST("/register", app.Register)
 
 	return &http.Server{
 		Addr:    cfg.WebAddr,

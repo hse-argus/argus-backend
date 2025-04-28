@@ -7,10 +7,12 @@ import (
 	"argus-backend/internal/db"
 	"argus-backend/internal/logger"
 	"argus-backend/internal/repository/service"
+	"argus-backend/internal/repository/user"
 	"argus-backend/internal/server"
 	clientservice "argus-backend/internal/service/client-service"
 	"argus-backend/internal/service/notification-service"
 	servicesinfo "argus-backend/internal/service/services-info"
+	userservice "argus-backend/internal/service/user-service"
 
 	"go.uber.org/fx"
 )
@@ -25,6 +27,8 @@ func main() {
 			clientservice.NewClientService,
 			db.InitDb,
 			service.NewServicesRepository,
+			user.NewUserRepository,
+			userservice.NewUserService,
 			servicesinfo.NewServicesInfo,
 			notificationservice.NewWebNotificationService,
 			app.NewApp,

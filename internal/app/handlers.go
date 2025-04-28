@@ -4,18 +4,56 @@ import (
 	"argus-backend/internal/logger"
 	"argus-backend/internal/repository/schedule"
 	"argus-backend/internal/repository/service"
+	"argus-backend/internal/repository/user"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+}
+
+func (a *App) Register(c *gin.Context) {
+	logger.Info("/register")
+
+	newUser := user.User{}
+	if err := c.BindJSON(&newUser); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "error in input data"})
+		return
+	}
+
+	token, err := a.userService.Register(newUser)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func (a *App) Login(c *gin.Context) {
+	logger.Info("/login")
+
+	newUser := user.User{}
+	if err := c.BindJSON(&newUser); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "error in input data"})
+		return
+	}
+
+	token, err := a.userService.Login(newUser.Login, newUser.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
 func (a *App) GetAllServices(c *gin.Context) {
@@ -90,6 +128,14 @@ func (a *App) HealthCheck(c *gin.Context) {
 	logger.Info("/health_check")
 
 	id, _ := strconv.Atoi(c.Param("id"))
+
+	userId, ok := c.Get("id")
+	if !ok {
+		c.JSON(400, gin.H{"error": "error getting user id"})
+		return
+	}
+
+	userIdCasted := strconv.Itoa(userId.(int))
 	serviceById, err := a.infoService.GetServiceById(id)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting service"))
@@ -105,7 +151,8 @@ func (a *App) HealthCheck(c *gin.Context) {
 	err = a.notificationService.SendWebNotification(fmt.Sprintf("Результат healthcheck: %d для сервиса %s",
 		statusCode,
 		serviceById.Name),
-		a.connections)
+		a.connections,
+		userIdCasted)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error sending web notification"))
 		return
@@ -122,6 +169,12 @@ func (a *App) HealthCheck(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+const (
+	writeWait  = 10 * time.Second
+	pongWait   = 60 * time.Second
+	pingPeriod = (pongWait * 9) / 10
+)
+
 func (a *App) HandleWSConnection(c *gin.Context) {
 	logger.Info("/ws")
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -130,26 +183,60 @@ func (a *App) HandleWSConnection(c *gin.Context) {
 		return
 	}
 
+	userId, ok := c.Get("id")
+	if !ok {
+		c.JSON(400, gin.H{"error": "error getting user id"})
+		return
+	}
+
+	userIdCasted := strconv.Itoa(userId.(int))
+
 	a.mu.Lock()
-	a.connections[ws] = true
+	a.connections[userIdCasted] = ws
 	a.mu.Unlock()
+
+	ws.SetReadLimit(512)
+	ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error {
+		ws.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	go func() {
+		ticker := time.NewTicker(pingPeriod)
+		defer ticker.Stop()
+		defer ws.Close()
+
+		for {
+			select {
+			case <-ticker.C:
+				a.mu.Lock()
+				err = ws.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(writeWait))
+				a.mu.Unlock()
+
+				if err != nil {
+					logger.Info("ping failed, closing connection")
+					return
+				}
+			}
+		}
+	}()
 
 	defer func() {
 		a.mu.Lock()
-		delete(a.connections, ws)
+		delete(a.connections, userIdCasted)
 		a.mu.Unlock()
 		logger.Info("ws connection closed")
 	}()
 
-	defer ws.Close()
-
+	logger.Info("ws connection established")
 	for {
-		_, _, err := ws.ReadMessage()
+		_, _, err = ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logger.Info("websocket connection closed unexpectedly")
+				logger.Info(fmt.Sprintf("websocket connection closed unexpectedly: %v", err))
 			} else {
-				logger.Info("WebSocket connection closed by client")
+				logger.Info(fmt.Sprintf("WebSocket connection closed: %v", err))
 			}
 			break
 		}
@@ -161,27 +248,60 @@ func (a *App) HandleSchedule(c *gin.Context) {
 
 	timeSchedule := schedule.Schedule{}
 	if err := c.BindJSON(&timeSchedule); err != nil {
-		_ = c.AbortWithError(http.StatusBadRequest, errors.New("error parsing body"))
+		c.JSON(400, gin.H{"error": "error parsing body"})
 		return
 	}
+
+	userId, ok := c.Get("id")
+	if !ok {
+		c.JSON(400, gin.H{"error": "error getting user id"})
+		return
+	}
+	userIdCasted := strconv.Itoa(userId.(int))
 
 	id, _ := strconv.Atoi(c.Param("id"))
 	serviceById, err := a.infoService.GetServiceById(id)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting service"))
+		c.JSON(500, gin.H{"error": "error getting service"})
 		return
 	}
 
 	parsedSchedule, ok := timeSchedule.ParseScheduleDuration()
 	if !ok {
-		_ = c.AbortWithError(http.StatusBadRequest, errors.New("unexisted schedule"))
+		c.JSON(400, gin.H{"error": "error parsing schedule duration"})
 		return
 	}
 
-	err = a.StartNewJob(serviceById, parsedSchedule)
+	jobID, err := a.StartNewJob(serviceById, parsedSchedule, userIdCasted)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error starting job"))
+		c.JSON(500, gin.H{"error": "error starting jo"})
 		return
 	}
+
+	err = a.infoService.AddJob(id, jobID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "error adding job"})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (a *App) DeleteSchedule(c *gin.Context) {
+	logger.Info("/delete-schedule")
+
+	id, _ := strconv.Atoi(c.Param("id"))
+	jobID, err := a.infoService.DeleteJob(id)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "error deleting job"})
+		return
+	}
+
+	err = a.RemoveJob(jobID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "error removing job"})
+		return
+	}
+
 	c.Status(http.StatusOK)
 }

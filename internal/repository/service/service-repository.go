@@ -1,7 +1,9 @@
 package service
 
 import (
+	"argus-backend/internal/logger"
 	"context"
+	"github.com/google/uuid"
 
 	"github.com/uptrace/bun"
 )
@@ -71,4 +73,35 @@ func (sr *ServicesRepository) GetServiceById(id int) (*Service, error) {
 		return nil, err
 	}
 	return service, nil
+}
+
+func (sr *ServicesRepository) AddJobID(id int, jobID uuid.UUID) error {
+	_, err := sr.db.NewUpdate().
+		Model((*Service)(nil)).
+		Where("id = ?", id).
+		Set("job_id", jobID).
+		Exec(context.Background())
+	if err != nil {
+		logger.Error("error updating job_id: " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (sr *ServicesRepository) DeleteJobID(id int) (uuid.UUID, error) {
+	var jobID uuid.UUID
+
+	err := sr.db.NewUpdate().
+		Model((*Service)(nil)).
+		Where("id = ?", id).
+		Set("job_id", uuid.Nil).
+		Returning("job_id").
+		Scan(context.Background(), &jobID)
+	if err != nil {
+		logger.Error("error deleting job_id: " + err.Error())
+		return uuid.Nil, err
+	}
+
+	return jobID, nil
 }

@@ -1,6 +1,9 @@
 package servicesinfo
 
-import "argus-backend/internal/repository/service"
+import (
+	"argus-backend/internal/repository/service"
+	"github.com/google/uuid"
+)
 
 type ServicesInfoInterface interface {
 	GetAllServices() (*[]service.Service, error)
@@ -8,6 +11,8 @@ type ServicesInfoInterface interface {
 	UpdateServiceInfo(service.Service) error
 	DeleteService(id int) error
 	GetServiceById(id int) (*service.Service, error)
+	AddJob(id int, jobID uuid.UUID) error
+	DeleteJob(id int) (uuid.UUID, error)
 }
 
 type ServicesInfo struct {
@@ -38,4 +43,12 @@ func (si *ServicesInfo) DeleteService(id int) error {
 
 func (si *ServicesInfo) GetServiceById(id int) (*service.Service, error) {
 	return si.servicesRepository.GetServiceById(id)
+}
+
+func (si *ServicesInfo) AddJob(id int, jobID uuid.UUID) error {
+	return si.servicesRepository.AddJobID(id, jobID)
+}
+
+func (si *ServicesInfo) DeleteJob(id int) (uuid.UUID, error) {
+	return si.servicesRepository.DeleteJobID(id)
 }

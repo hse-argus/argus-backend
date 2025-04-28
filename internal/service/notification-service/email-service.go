@@ -12,7 +12,7 @@ func (wns *NotificationService) SendEmailNotification(text string) error {
 	mail.SetHeader("Subject", "Argus notification")
 	mail.SetBody("text/plain", text)
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, "just.sparkless@gmail.com", "")
+	d := gomail.NewDialer("smtp.gmail.com", 587, "just.sparkless@gmail.com", "hknt nnwa jaze jqjw")
 	if err := d.DialAndSend(mail); err != nil {
 		logger.Error("error sending notification via email: " + err.Error())
 		return err
