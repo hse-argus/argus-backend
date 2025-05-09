@@ -6,7 +6,7 @@ import (
 )
 
 type ServicesInfoInterface interface {
-	GetAllServices() (*[]service.Service, error)
+	GetAllServices(userId int) (*[]service.Service, error)
 	AddServiceInfo(service.Service) error
 	UpdateServiceInfo(service.Service) error
 	DeleteService(id int) error
@@ -25,8 +25,8 @@ func NewServicesInfo(servicesRepository *service.ServicesRepository) ServicesInf
 	}
 }
 
-func (si *ServicesInfo) GetAllServices() (*[]service.Service, error) {
-	return si.servicesRepository.GetAllServices()
+func (si *ServicesInfo) GetAllServices(userId int) (*[]service.Service, error) {
+	return si.servicesRepository.GetAllServices(userId)
 }
 
 func (si *ServicesInfo) AddServiceInfo(newService service.Service) error {

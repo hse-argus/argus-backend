@@ -33,10 +33,11 @@ func (us *UserService) Login(login string, password string) (string, error) {
 }
 
 func (us *UserService) Register(creds user.User) (string, error) {
-	err := us.userRepo.AddUser(creds)
+	id, err := us.userRepo.AddUser(creds)
 	if err != nil {
 		return "", err
 	}
+	creds.Id = id
 
 	return createJWTToken(&creds)
 }

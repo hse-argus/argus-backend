@@ -12,4 +12,5 @@ type Service struct {
 	Port          int       `bun:"port" json:"port"`
 	Address       string    `bun:"address" json:"address"`
 	JobID         uuid.UUID `bun:"job_id"`
+	UserID        int       `bun:"user_id"`
 }

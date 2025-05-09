@@ -2,6 +2,7 @@ package app
 
 import (
 	"argus-backend/internal/logger"
+	"argus-backend/internal/middleware"
 	"argus-backend/internal/repository/schedule"
 	"argus-backend/internal/repository/service"
 	"argus-backend/internal/repository/user"
@@ -59,9 +60,15 @@ func (a *App) Login(c *gin.Context) {
 func (a *App) GetAllServices(c *gin.Context) {
 	logger.Info("/get_all_services")
 
-	services, err := a.infoService.GetAllServices()
+	userId, ok := c.Get("id")
+	if !ok {
+		c.JSON(400, gin.H{"error": "error getting user id"})
+		return
+	}
+
+	services, err := a.infoService.GetAllServices(userId.(int))
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("error getting all services"))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting all services: " + err.Error()})
 		return
 	}
 
@@ -76,6 +83,13 @@ func (a *App) AddService(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, errors.New("error parsing body"))
 		return
 	}
+
+	userId, ok := c.Get("id")
+	if !ok {
+		c.JSON(400, gin.H{"error": "error getting user id"})
+		return
+	}
+	newService.UserID = userId.(int)
 
 	err := a.infoService.AddServiceInfo(newService)
 	if err != nil {
@@ -183,16 +197,18 @@ func (a *App) HandleWSConnection(c *gin.Context) {
 		return
 	}
 
-	userId, ok := c.Get("id")
-	if !ok {
-		c.JSON(400, gin.H{"error": "error getting user id"})
+	token := c.Query("token")
+	logger.Info("token: " + token)
+	claims, err := middleware.ParseToken(token)
+	if err != nil {
+		logger.Error("error parsing token: " + err.Error())
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "error parsing token: " + err.Error()})
 		return
 	}
 
-	userIdCasted := strconv.Itoa(userId.(int))
-
+	logger.Info("id: " + strconv.Itoa(claims.Id))
 	a.mu.Lock()
-	a.connections[userIdCasted] = ws
+	a.connections[strconv.Itoa(claims.Id)] = ws
 	a.mu.Unlock()
 
 	ws.SetReadLimit(512)
@@ -224,7 +240,7 @@ func (a *App) HandleWSConnection(c *gin.Context) {
 
 	defer func() {
 		a.mu.Lock()
-		delete(a.connections, userIdCasted)
+		delete(a.connections, strconv.Itoa(claims.Id))
 		a.mu.Unlock()
 		logger.Info("ws connection closed")
 	}()

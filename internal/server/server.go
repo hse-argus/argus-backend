@@ -26,9 +26,9 @@ func NewServer(cfg *config.Config, app *app.App) *http.Server {
 
 		authorized.POST("/healthcheck/:id", app.HealthCheck)
 		authorized.POST("/scheduled-healthcheck/:id", app.HandleSchedule)
-		authorized.DELETE("/schedule", app.DeleteSchedule)
-		authorized.GET("/ws", app.HandleWSConnection)
+		authorized.DELETE("/schedule/:id", app.DeleteSchedule)
 	}
+	router.GET("/ws", app.HandleWSConnection)
 	router.POST("/login", app.Login)
 	router.POST("/register", app.Register)
 

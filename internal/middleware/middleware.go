@@ -61,3 +61,21 @@ func JWTTokenVerify(c *gin.Context) {
 
 	c.Next()
 }
+
+func ParseToken(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		jwtKey, _ := os.LookupEnv("SECRET_KEY")
+		return []byte(jwtKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		logger.Error("token is invalid")
+		return nil, err
+	}
+
+	return claims, nil
+}

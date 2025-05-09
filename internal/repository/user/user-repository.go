@@ -32,22 +32,24 @@ func (ur *UserRepository) GetUserByLogin(login string) (*User, error) {
 	return &user, nil
 }
 
-func (ur *UserRepository) AddUser(user User) error {
+func (ur *UserRepository) AddUser(user User) (int, error) {
 	existing, _ := ur.GetUserByLogin(user.Login)
 	if existing != nil {
 		logger.Info("user already exists")
-		return customerrors.AlreadyExistsError{}
+		return 0, customerrors.AlreadyExistsError{}
 	}
+	var id int
 
-	_, err := ur.db.NewInsert().
+	err := ur.db.NewInsert().
 		Model(&user).
-		Exec(context.Background())
+		Returning("id").
+		Scan(context.Background(), &id)
 	if err != nil {
 		logger.Info(fmt.Sprintf("add user error: %v", err))
-		return err
+		return 0, err
 	}
 
-	return nil
+	return id, nil
 }
 
 func (ur *UserRepository) GetUser(login string, password string) (*User, error) {
