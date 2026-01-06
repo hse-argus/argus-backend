@@ -1,8 +1,8 @@
 package userservice
 
 import (
-	"argus-backend/internal/logger"
-	"argus-backend/internal/repository/user"
+	"observer/internal/logger"
+	"observer/internal/repository/user"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"os"

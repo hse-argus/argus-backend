@@ -1,7 +1,7 @@
 package user
 
 import (
-	"argus-backend/internal/repository/service"
+	"observer/internal/repository/service"
 	"github.com/uptrace/bun"
 )
 

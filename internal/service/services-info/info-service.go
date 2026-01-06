@@ -1,7 +1,7 @@
 package servicesinfo
 
 import (
-	"argus-backend/internal/repository/service"
+	"observer/internal/repository/service"
 	"github.com/google/uuid"
 )
 

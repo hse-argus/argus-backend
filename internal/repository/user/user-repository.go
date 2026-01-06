@@ -1,8 +1,8 @@
 package user
 
 import (
-	customerrors "argus-backend/internal/errors"
-	"argus-backend/internal/logger"
+	customerrors "observer/internal/errors"
+	"observer/internal/logger"
 	"context"
 	"fmt"
 	"github.com/uptrace/bun"

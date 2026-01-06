@@ -12,7 +12,7 @@ type Config struct {
 func NewConfig() *Config {
 	return &Config{
 		WebAddr:          ":3000",
-		PostgresDb:       "argus",
+		PostgresDb:       "observer",
 		PostgresUser:     "username",
 		PostgresPassword: "1234",
 		PostgresPort:     5432,

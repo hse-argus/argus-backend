@@ -1,7 +1,7 @@
 package notificationservice
 
 import (
-	"argus-backend/internal/logger"
+	"observer/internal/logger"
 	"gopkg.in/gomail.v2"
 )
 

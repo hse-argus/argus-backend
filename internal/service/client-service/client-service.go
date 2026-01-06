@@ -1,7 +1,7 @@
 package client_service
 
 import (
-	"argus-backend/internal/logger"
+	"observer/internal/logger"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 )

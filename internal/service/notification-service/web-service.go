@@ -1,7 +1,7 @@
 package notificationservice
 
 import (
-	"argus-backend/internal/logger"
+	"observer/internal/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -14,6 +14,10 @@ func NewWebNotificationService() *NotificationService {
 func (wns *NotificationService) SendWebNotification(text string,
 	connections map[string]*websocket.Conn,
 	userLogin string) error {
+	connection := connections[userLogin]
+	if connection == nil {
+		return nil
+	}
 	err := connections[userLogin].WriteMessage(websocket.TextMessage, []byte(text))
 	if err != nil {
 		logger.Error("error sending ws event: " + err.Error())

@@ -1,12 +1,12 @@
 package app
 
 import (
-	"argus-backend/internal/logger"
-	"argus-backend/internal/repository/service"
-	clientservice "argus-backend/internal/service/client-service"
-	notificationservice "argus-backend/internal/service/notification-service"
-	servicesinfo "argus-backend/internal/service/services-info"
-	userservice "argus-backend/internal/service/user-service"
+	"observer/internal/logger"
+	"observer/internal/repository/service"
+	clientservice "observer/internal/service/client-service"
+	notificationservice "observer/internal/service/notification-service"
+	servicesinfo "observer/internal/service/services-info"
+	userservice "observer/internal/service/user-service"
 	"fmt"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"

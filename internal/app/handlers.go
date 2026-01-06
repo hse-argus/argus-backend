@@ -1,11 +1,11 @@
 package app
 
 import (
-	"argus-backend/internal/logger"
-	"argus-backend/internal/middleware"
-	"argus-backend/internal/repository/schedule"
-	"argus-backend/internal/repository/service"
-	"argus-backend/internal/repository/user"
+	"observer/internal/logger"
+	"observer/internal/middleware"
+	"observer/internal/repository/schedule"
+	"observer/internal/repository/service"
+	"observer/internal/repository/user"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"

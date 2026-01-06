@@ -1,7 +1,7 @@
 package service
 
 import (
-	"argus-backend/internal/logger"
+	"observer/internal/logger"
 	"context"
 	"github.com/google/uuid"
 

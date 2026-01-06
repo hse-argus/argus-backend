@@ -1,10 +1,10 @@
 package server
 
 import (
-	"argus-backend/internal/app"
-	"argus-backend/internal/config"
-	"argus-backend/internal/logger"
-	"argus-backend/internal/middleware"
+	"observer/internal/app"
+	"observer/internal/config"
+	"observer/internal/logger"
+	"observer/internal/middleware"
 	"context"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
